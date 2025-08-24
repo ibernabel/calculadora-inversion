@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prueba de Currency Mask Mejorada</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .test-input { padding: 10px; margin: 10px 0; border: 1px solid #ccc; width: 200px; }
+    .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    .test-title { font-weight: bold; color: #333; }
+    .expected { color: #666; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Prueba de Currency Mask Mejorada</h1>
+
+  <div class="test-case">
+    <div class="test-title">Caso 1: Número grande con decimales</div>
+    <div class="expected">Esperado: 1,000,000.55 (no 1,000,000.,555)</div>
+    <input type="text" class="test-input moneda" placeholder="Prueba: 1000000.555">
+  </div>
+
+  <div class="test-case">
+    <div class="test-title">Caso 2: Solo parte entera</div>
+    <div class="expected">Esperado: 123,456,789</div>
+    <input type="text" class="test-input moneda" placeholder="Prueba: 123456789">
+  </div>
+
+  <div class="test-case">
+    <div class="test-title">Caso 3: Decimales limitados a 2</div>
+    <div class="expected">Esperado: 123.45 (no más de 2 decimales)</div>
+    <input type="text" class="test-input moneda" placeholder="Prueba: 123.4567">
+  </div>
+
+  <div class="test-case">
+    <div class="test-title">Caso 4: Sin punto decimal</div>
+    <div class="expected">Esperado: 999</div>
+    <input type="text" class="test-input moneda" placeholder="Prueba: 999">
+  </div>
+
+  <div class="test-case">
+    <div class="test-title">Caso 5: Múltiples puntos (debe prevenirse)</div>
+    <div class="expected">Esperado: 123.45 (solo un punto decimal)</div>
+    <input type="text" class="test-input moneda" placeholder="Prueba: 123..45.67">
+  </div>
+
+  <div class="test-case">
+    <div class="test-title">Caso 6: Caracteres no numéricos (deben ignorarse)</div>
+    <div class="expected">Esperado: 1,234.56</div>
+    <input type="text" class="test-input moneda" placeholder="Prueba: 1a2b3c4.5d6">
+  </div>
+
+  <script>
+    // Custom currency input mask implementation mejorada
+    function setupCurrencyMask() {
+      const currencyInputs = document.querySelectorAll('.moneda');
+
+      currencyInputs.forEach(input => {
+        let lastValidValue = '';
+
+        input.addEventListener('input', function (e) {
+          let value = this.value;
+
+          // Remover caracteres no permitidos (solo dígitos y punto decimal)
+          value = value.replace(/[^0-9.]+/g, '');
+
+          // Prevenir múltiples puntos decimales
+          const parts = value.split('.');
+          if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+          }
+
+          // Si hay parte decimal, limitar a 2 dígitos
+          if (parts.length === 2 && parts[1].length > 2) {
+            value = parts[0] + '.' + parts[1].substring(0, 2);
+          }
+
+          // Separar parte entera y decimal
+          const [integerPart, decimalPart] = value.split('.');
+
+          // Formatear parte entera con comas cada 3 dígitos
+          let formattedInteger = '';
+          if (integerPart) {
+            formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+          }
+
+          // Reconstruir el valor
+          let formattedValue = formattedInteger;
+          if (decimalPart !== undefined) {
+            formattedValue += '.' + decimalPart;
+          }
+
+          // Si el valor formateado es válido, actualizar
+          if (formattedValue !== '' || value === '') {
+            this.value = formattedValue;
+            lastValidValue = formattedValue;
+          } else {
+            this.value = lastValidValue;
+          }
+        });
+
+        // Prevent non-numeric input except for digits, decimal point, backspace, delete
+        input.addEventListener('keypress', function (e) {
+          // Permitir números, punto decimal, backspace, delete, tab, etc.
+          if (/[^0-9.]+/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
+            e.preventDefault();
+          }
+
+          // Prevenir múltiples puntos decimales
+          if (e.key === '.' && this.value.includes('.')) {
+            e.preventDefault();
+          }
+
+          // Prevenir más de 2 decimales
+          if (this.value.includes('.') && !isNaN(parseInt(e.key))) {
+            const decimalPart = this.value.split('.')[1];
+            if (decimalPart && decimalPart.length >= 2) {
+              e.preventDefault();
+            }
+          }
+        });
+
+        // Manejar pegado (paste) para asegurar formato correcto
+        input.addEventListener('paste', function (e) {
+          e.preventDefault();
+          let paste = (e.clipboardData || window.clipboardData).getData('text');
+
+          // Limpiar el valor pegado
+          paste = paste.replace(/[^0-9.]+/g, '');
+
+          // Simular input para aplicar formato
+          const currentValue = this.value;
+          this.value = currentValue + paste;
+
+          // Trigger input event para formatear
+          const inputEvent = new Event('input', { bubbles: true });
+          this.dispatchEvent(inputEvent);
+        });
+      });
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', setupCurrencyMask);
+  </script>
+</body>
+</html>
