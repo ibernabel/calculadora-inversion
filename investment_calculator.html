@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Inversión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .calculator-container {
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 30px;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .calculator-title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #ffffff;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #8bc34a;
+            box-shadow: 0 0 0 3px rgba(139, 195, 74, 0.1);
+        }
+
+        .form-input:hover {
+            border-color: #bdc3c7;
+        }
+        .form-input::placeholder {
+            color: #95a5a6;
+            font-style: italic;
+        }
+        .button-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .btn-clear {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-clear:hover {
+            background: #7f8c8d;
+            transform: translateY(-2px);
+        }
+
+        .result-container {
+            background: linear-gradient(135deg, #8bc34a, #689f38);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+            transform: translateY(10px);
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .result-container.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .result-label {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .result-amount {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .result-breakdown {
+            font-size: 0.95rem;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .calculator-container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .calculator-title {
+                font-size: 1.5rem;
+            }
+            
+            .result-amount {
+                font-size: 1.7rem;
+            }
+            
+            .form-input {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .calculator-container {
+                padding: 15px;
+            }
+            
+            .result-amount {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <h1 class="calculator-title">Calculadora de Inversión</h1>
+        
+        <div class="form-group">
+            <label class="form-label" for="montoInicial">Monto Inicial (RD$)*</label>
+            <input type="number" id="montoInicial" class="form-input" placeholder="Máximo 100,000,000.00" min="1000" max="100000000" step="0.01">
+            <div class="error-message" id="errorMonto">Por favor ingrese un monto válido</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="meses">Plazo (Meses)*</label>
+            <input type="number" id="meses" class="form-input" placeholder="Máximo 240" min="1" max="240">
+            <div class="error-message" id="errorMeses">Por favor ingrese un plazo entre 1 y 240 meses</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="tasa">Tasa de Interés Anual (%)*</label>
+            <input type="number" id="tasa" class="form-input" placeholder="Máximo 50.00" min="0" max="50" step="0.01">
+            <div class="error-message" id="errorTasa">Por favor ingrese una tasa entre 0% y 50%</div>
+        </div>
+
+        <div class="button-container">
+            <button class="btn-clear" onclick="limpiarCampos()">Limpiar</button>
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-label">Total</div>
+            <div class="result-amount" id="resultAmount">RD$0.00</div>
+            <div class="result-breakdown" id="resultBreakdown">
+                Inversión inicial: RD$0.00<br>
+                Intereses ganados: RD$0.00
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función para formatear números a moneda dominicana
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-DO', {
+                style: 'currency',
+                currency: 'DOP',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // Función para formatear números con separadores de miles
+        function formatNumber(num) {
+            return new Intl.NumberFormat('es-DO', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(num);
+        }
+
+        // Función para validar entrada
+        function validateInput(value, min, max, fieldName) {
+            const num = parseFloat(value);
+            if (isNaN(num) || value === '') {
+                return { valid: false, message: `Por favor ingrese un ${fieldName} válido` };
+            }
+            if (num < min || num > max) {
+                return { valid: false, message: `${fieldName} debe estar entre ${min} y ${max}` };
+            }
+            return { valid: true };
+        }
+
+        // Función para mostrar/ocultar errores
+        function showError(fieldId, message) {
+            const errorElement = document.getElementById(`error${fieldId}`);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        function hideError(fieldId) {
+            const errorElement = document.getElementById(`error${fieldId}`);
+            errorElement.style.display = 'none';
+        }
+
+        // Función principal de cálculo
+        function calcularInversion() {
+            // Obtener valores
+            const montoInicial = document.getElementById('montoInicial').value;
+            const meses = document.getElementById('meses').value;
+            const tasaAnual = document.getElementById('tasa').value;
+
+            // Limpiar errores previos
+            hideError('Monto');
+            hideError('Meses');
+            hideError('Tasa');
+
+            // Validar entradas
+            let hasError = false;
+
+            const validMonto = validateInput(montoInicial, 0, Infinity, 'monto');
+            if (!validMonto.valid) {
+                showError('Monto', validMonto.message);
+                hasError = true;
+            }
+
+            const validMeses = validateInput(meses, 1, 240, 'plazo');
+            if (!validMeses.valid) {
+                showError('Meses', validMeses.message);
+                hasError = true;
+            }
+
+            const validTasa = validateInput(tasaAnual, 0, 50, 'tasa');
+            if (!validTasa.valid) {
+                showError('Tasa', validTasa.message);
+                hasError = true;
+            }
+
+            // Si hay errores o campos vacíos, ocultar resultado
+            if (hasError || !montoInicial || !meses || !tasaAnual) {
+                document.getElementById('resultContainer').classList.remove('show');
+                return;
+            }
+
+            // Convertir a números
+            const monto = parseFloat(montoInicial);
+            const plazo = parseInt(meses);
+            const tasa = parseFloat(tasaAnual);
+
+            // Calcular interés compuesto
+            const tasaMensual = tasa / 100 / 12;
+            const montoFinal = monto * Math.pow(1 + tasaMensual, plazo);
+            const interesesGanados = montoFinal - monto;
+
+            // Mostrar resultados
+            document.getElementById('resultAmount').textContent = formatCurrency(montoFinal);
+            document.getElementById('resultBreakdown').innerHTML = `
+                Inversión inicial: ${formatCurrency(monto)}<br>
+                Intereses ganados: ${formatCurrency(interesesGanados)}
+            `;
+            
+            document.getElementById('resultContainer').classList.add('show');
+        }
+
+        // Función para limpiar campos
+        function limpiarCampos() {
+            document.getElementById('montoInicial').value = '';
+            document.getElementById('meses').value = '';
+            document.getElementById('tasa').value = '';
+            document.getElementById('resultContainer').classList.remove('show');
+            
+            // Limpiar errores
+            hideError('Monto');
+            hideError('Meses');
+            hideError('Tasa');
+        }
+
+        // Event listeners para cálculo automático
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = ['montoInicial', 'meses', 'tasa'];
+            
+            inputs.forEach(function(inputId) {
+                const element = document.getElementById(inputId);
+                
+                // Calcular en tiempo real mientras se escribe
+                element.addEventListener('input', calcularInversion);
+                
+                // También calcular cuando se sale del campo
+                element.addEventListener('blur', calcularInversion);
+            });
+        });
+    </script>
+</body>
+</html>
